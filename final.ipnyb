@@ -1,0 +1,68 @@
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix, classification_report
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.impute import SimpleImputer
+from joblib import dump, load
+
+# Load the training file
+train_file_path = '/kaggle/input/gdsc-recruitments-2023/train.csv'
+df_train = pd.read_csv(train_file_path)
+
+# Select only numeric columns for imputation
+numeric_columns = df_train.select_dtypes(include=['number'])
+
+# Handle missing values by imputing with the mean
+imputer = SimpleImputer(strategy='mean')
+df_imputed_train = imputer.fit_transform(numeric_columns)
+
+# Convert the imputed data back to a DataFrame
+df_imputed_train = pd.DataFrame(df_imputed_train, columns=numeric_columns.columns)
+
+# Combine the imputed numeric data with the non-numeric columns
+df_train[df_imputed_train.columns] = df_imputed_train
+
+# Select the columns for modeling (including both numeric and categorical)
+selected_columns = ['ph_no', 'cvv', 'credit_card_number', '6aHwr', 'CbKM4', 'PwJxl', 'rWVvg', '98Zw0', '9buXh', 'state']
+df_train = df_train[selected_columns]
+
+# Split the training data into features (X) and target variable (y)
+X_train = df_train.drop(columns=['state'])  # Features
+y_train = df_train['state']  # Target variable
+
+# Train a Random Forest classifier on the entire training dataset
+model = RandomForestClassifier()
+model.fit(X_train, y_train)
+
+# Save the trained model to a file
+model_filename = 'trained_random_forest_model.joblib'
+dump(model, model_filename)
+
+print(f'Trained model saved to {model_filename}')
+
+# Load the test data and select only the relevant columns for modeling
+test_file_path = '/kaggle/input/gdsc-recruitments-2023/test_corrected.csv'
+df_test = pd.read_csv(test_file_path)
+X_test = df_test[['ph_no', 'cvv', 'credit_card_number', '6aHwr', 'CbKM4', 'PwJxl', 'rWVvg', '98Zw0', '9buXh']]
+
+# Load the trained model from file
+model_filename = 'trained_random_forest_model.joblib'
+model = load(model_filename)
+
+# Load the test data and select only the relevant columns for modeling
+test_file_path = '/kaggle/input/gdsc-recruitments-2023/test_corrected.csv'
+df_test = pd.read_csv(test_file_path)
+X_test = df_test[['ph_no', 'cvv', 'credit_card_number', '6aHwr', 'CbKM4', 'PwJxl', 'rWVvg', '98Zw0', '9buXh']]
+
+# Impute missing values in the input data using an imputer object
+imputer = SimpleImputer(strategy='mean')
+X_test_imputed = imputer.fit_transform(X_test)
+X_test_imputed = pd.DataFrame(X_test_imputed, columns=X_test.columns)
+
+# Make predictions on the test data using the trained model
+y_pred = model.predict(X_test_imputed)
+
+# Print out the predicted target variable values for each test case
+for i, y in enumerate(y_pred):
+    print(f'ID: {12000+i}, state: {y}')
